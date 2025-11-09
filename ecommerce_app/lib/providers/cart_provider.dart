@@ -37,6 +37,7 @@ class CartProvider with ChangeNotifier {
   // 4. Change this: _items is no longer final
   List<CartItem> _items = [];
   List<CartItem> get items => _items;
+
   // 5. ADD THESE: New properties for auth and database
   String? _userId; // Will hold the current user's ID
   StreamSubscription? _authSubscription; // To listen to auth changes
@@ -50,6 +51,15 @@ class CartProvider with ChangeNotifier {
     int total = 0;
     for (var item in _items) {
       total += item.quantity;
+    }
+    return total;
+  }
+
+  // 5. A public "getter" to calculate the total price
+  double get totalPrice {
+    double total = 0.0;
+    for (var item in _items) {
+      total += (item.price * item.quantity);
     }
     return total;
   }
@@ -75,18 +85,9 @@ class CartProvider with ChangeNotifier {
     });
   }
 
-  // 5. A public "getter" to calculate the total price
-  double get totalPrice {
-    double total = 0.0;
-    for (var item in _items) {
-      total += (item.price * item.quantity);
-    }
-    return total;
-  }
-
   // 6. The main logic: "Add Item to Cart"
   void addItem(String id, String name, double price) {
-    // 7. Check if the item is already in the cart
+    // ... (all your existing logic is the same)
     var index = _items.indexWhere((item) => item.id == id);
     if (index != -1) {
       _items[index].quantity++;
@@ -98,11 +99,49 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 11. The "Remove Item from Cart" logic
   void removeItem(String id) {
+    // ... (existing logic is the same)
     _items.removeWhere((item) => item.id == id);
+
     _saveCart(); // 11. ADD THIS LINE
     notifyListeners();
+  }
+
+  // 1. ADD THIS: Creates an order in the 'orders' collection
+  Future<void> placeOrder() async {
+    // 2. Check if we have a user and items
+    if (_userId == null || _items.isEmpty) {
+      // Don't place an order if cart is empty or user is logged out
+      throw Exception('Cart is empty or user is not logged in.');
+    }
+
+    try {
+      // 3. Convert our List<CartItem> to a List<Map> using toJson()
+      final List<Map<String, dynamic>> cartData = _items
+          .map((item) => item.toJson())
+          .toList();
+
+      // 4. Get total price and item count from our getters
+      final double total = totalPrice;
+      final int count = itemCount;
+
+      // 5. Create a new document in the 'orders' collection
+      await _firestore.collection('orders').add({
+        'userId': _userId,
+        'items': cartData, // Our list of item maps
+        'totalPrice': total,
+        'itemCount': count,
+        'status': 'Pending', // 6. IMPORTANT: For admin verification
+        'createdAt': FieldValue.serverTimestamp(), // For sorting
+      });
+
+      // 7. Note: We DO NOT clear the cart here.
+      //    We'll call clearCart() separately from the UI after this succeeds.
+    } catch (e) {
+      print('Error placing order: $e');
+      // 8. Re-throw the error so the UI can catch it
+      throw e;
+    }
   }
 
   // 8. ADD THIS: Fetches the cart from Firestore
@@ -118,6 +157,7 @@ class CartProvider with ChangeNotifier {
         final List<dynamic> cartData = doc.data()!['cartItems'];
 
         // 3. Convert that list of Maps into our List<CartItem>
+        //    (This is why we made CartItem.fromJson!)
         _items = cartData.map((item) => CartItem.fromJson(item)).toList();
         print('Cart fetched successfully: ${_items.length} items');
       } else {
@@ -137,6 +177,7 @@ class CartProvider with ChangeNotifier {
 
     try {
       // 1. Convert our List<CartItem> into a List<Map>
+      //    (This is why we made toJson()!)
       final List<Map<String, dynamic>> cartData = _items
           .map((item) => item.toJson())
           .toList();
@@ -149,6 +190,14 @@ class CartProvider with ChangeNotifier {
     } catch (e) {
       print('Error saving cart: $e');
     }
+  }
+
+  Future<void> clearCart() async {
+    _items = []; // Clear local list
+    await _firestore.collection('userCarts').doc(_userId).set({
+      'cartItems': [],
+    });
+    notifyListeners(); // Update UI
   }
 
   // 12. ADD THIS METHOD (or update it if it exists)

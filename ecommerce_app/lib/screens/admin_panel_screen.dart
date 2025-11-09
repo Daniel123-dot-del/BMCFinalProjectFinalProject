@@ -133,7 +133,55 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               Form(
                 key: _formKey,
                 child: Column(
-                  // ... (your existing form with Image URL, Name, Price, etc.)
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Product Name',
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter a name'
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _descriptionController,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter a description'
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _priceController,
+                      decoration: const InputDecoration(labelText: 'Price'),
+                      keyboardType: TextInputType.number,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter a price'
+                          : null,
+                    ),
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _imageUrlController,
+                      decoration: const InputDecoration(labelText: 'Image URL'),
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter an image URL'
+                          : null,
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _uploadProduct,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            )
+                          : const Text('Upload Product'),
+                    ),
+                  ],
                 ),
               ),
             ],
