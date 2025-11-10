@@ -46,22 +46,33 @@ class CartProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 4. A public "getter" to calculate the total number of items
-  int get itemCount {
-    int total = 0;
-    for (var item in _items) {
-      total += item.quantity;
-    }
-    return total;
-  }
+  // --- THIS IS THE GETTERS SECTION ---
 
-  // 5. A public "getter" to calculate the total price
-  double get totalPrice {
+  // 1. RENAME 'totalPrice' to 'subtotal'
+  //    This is the total price *before* tax.
+  double get subtotal {
     double total = 0.0;
     for (var item in _items) {
       total += (item.price * item.quantity);
     }
     return total;
+  }
+
+  // 2. ADD this new getter for VAT (12%)
+  double get vat {
+    return subtotal * 0.12; // 12% of the subtotal
+  }
+
+  // 3. ADD this new getter for the FINAL total
+  double get totalPriceWithVat {
+    return subtotal + vat;
+  }
+
+  // 4. We can leave the old 'totalPrice' getter for now,
+  //    or delete it. Let's update 'itemCount' to be cleaner:
+  int get itemCount {
+    // This 'fold' is a cleaner way to sum a list.
+    return _items.fold(0, (total, item) => total + item.quantity);
   }
 
   // 7. ADD THIS CONSTRUCTOR
@@ -94,6 +105,29 @@ class CartProvider with ChangeNotifier {
     } else {
       _items.add(CartItem(id: id, name: name, price: price));
     }
+    // 2. THIS IS THE NEW, UPDATED FUNCTION:
+    void addItem(String id, String name, double price, int quantity) {
+      // 3. Check if the item is already in the cart
+      var index = _items.indexWhere((item) => item.id == id);
+
+      if (index != -1) {
+        // 4. If YES: Add the new quantity to the existing quantity
+        _items[index].quantity += quantity;
+      } else {
+        // 5. If NO: Add the item with the specified quantity
+        _items.add(
+          CartItem(
+            id: id,
+            name: name,
+            price: price,
+            quantity: quantity, // Use the quantity from the parameter
+          ),
+        );
+      }
+
+      _saveCart(); // This is the same
+      notifyListeners(); // This is the same
+    }
 
     _saveCart(); // 10. ADD THIS LINE
     notifyListeners();
@@ -107,39 +141,37 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 1. ADD THIS: Creates an order in the 'orders' collection
   Future<void> placeOrder() async {
-    // 2. Check if we have a user and items
     if (_userId == null || _items.isEmpty) {
-      // Don't place an order if cart is empty or user is logged out
       throw Exception('Cart is empty or user is not logged in.');
     }
 
     try {
-      // 3. Convert our List<CartItem> to a List<Map> using toJson()
       final List<Map<String, dynamic>> cartData = _items
           .map((item) => item.toJson())
           .toList();
 
-      // 4. Get total price and item count from our getters
-      final double total = totalPrice;
+      // 1. --- THIS IS THE CHANGE ---
+      //    Get all our new calculated values
+      final double sub = subtotal;
+      final double v = vat;
+      final double total = totalPriceWithVat;
       final int count = itemCount;
 
-      // 5. Create a new document in the 'orders' collection
+      // 2. Update the data we save to Firestore
       await _firestore.collection('orders').add({
         'userId': _userId,
-        'items': cartData, // Our list of item maps
-        'totalPrice': total,
+        'items': cartData,
+        'subtotal': sub, // 3. ADD THIS
+        'vat': v, // 4. ADD THIS
+        'totalPrice': total, // 5. This is now the VAT-inclusive price
         'itemCount': count,
-        'status': 'Pending', // 6. IMPORTANT: For admin verification
-        'createdAt': FieldValue.serverTimestamp(), // For sorting
+        'status': 'Pending',
+        'createdAt': FieldValue.serverTimestamp(),
       });
-
-      // 7. Note: We DO NOT clear the cart here.
-      //    We'll call clearCart() separately from the UI after this succeeds.
+      // --- END OF CHANGE ---
     } catch (e) {
       print('Error placing order: $e');
-      // 8. Re-throw the error so the UI can catch it
       throw e;
     }
   }
@@ -192,7 +224,6 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  // ✅ ADD THIS: Clears the cart after placing order
   Future<void> clearCart() async {
     _items = []; // Clear local list
     await _firestore.collection('userCarts').doc(_userId).set({

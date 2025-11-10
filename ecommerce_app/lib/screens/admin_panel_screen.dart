@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:ecommerce_app/screens/admin_order_screen.dart'; // 1. ADD THIS
+import 'package:ecommerce_app/screens/admin_chat_list_screen.dart';
+import 'package:ecommerce_app/utils/analytics.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   const AdminPanelScreen({super.key});
@@ -100,6 +102,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SimpleAnalyticsPeek(),
+
                 // 3. --- ADD THIS NEW BUTTON ---
                 ElevatedButton.icon(
                   icon: const Icon(Icons.list_alt),
@@ -118,6 +122,24 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     );
                   },
                 ),
+                // 3. --- ADD THIS NEW BUTTON ---
+                const SizedBox(height: 10),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  label: const Text('View User Chats'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue[700],
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const AdminChatListScreen(),
+                      ),
+                    );
+                  },
+                ),
+                // --- END OF NEW BUTTON ---
+                const Divider(height: 30, thickness: 1),
 
                 // 5. A divider to separate it
                 const Divider(height: 30, thickness: 1),
@@ -197,6 +219,166 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class SimpleAnalyticsPeek extends StatelessWidget {
+  const SimpleAnalyticsPeek({super.key});
+
+  Future<Map<String, dynamic>> _fetchTotals() async {
+    final firestore = FirebaseFirestore.instance;
+
+    final snapshot = await firestore.collection('products').get();
+    int totalViews = 0;
+    int totalSales = 0;
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      totalViews += (data['views'] ?? 0) as int;
+      totalSales += (data['sales'] ?? 0) as int;
+    }
+
+    final topViewsSnapshot = await firestore
+        .collection('products')
+        .orderBy('views', descending: true)
+        .limit(5)
+        .get();
+
+    final topByViews = topViewsSnapshot.docs.map((d) {
+      final data = d.data();
+      return {
+        'id': d.id,
+        'name': data['name'] ?? '',
+        'views': data['views'] ?? 0,
+        'sales': data['sales'] ?? 0,
+        'price': data['price'] ?? 0,
+      };
+    }).toList();
+
+    return {
+      'totalViews': totalViews,
+      'totalSales': totalSales,
+      'topByViews': topByViews,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: FutureBuilder<Map<String, dynamic>>(
+          future: _fetchTotals(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (snapshot.hasError) {
+              return SizedBox(
+                height: 120,
+                child: Center(child: Text('Error loading analytics')),
+              );
+            }
+            final data = snapshot.data!;
+            final totalViews = data['totalViews'] as int;
+            final totalSales = data['totalSales'] as int;
+            final topByViews = data['topByViews'] as List<dynamic>;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Analytics Peek',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Views',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$totalViews',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Sales',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$totalSales',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 18),
+                const Text(
+                  'Top Products (by views)',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 140,
+                  child: ListView.separated(
+                    itemCount: topByViews.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (context, index) {
+                      final p = topByViews[index] as Map<String, dynamic>;
+                      return Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              p['name'] ?? '',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '👁 ${p['views']}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '🛒 ${p['sales']}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

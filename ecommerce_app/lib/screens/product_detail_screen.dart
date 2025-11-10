@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:ecommerce_app/providers/cart_provider.dart'; // 1. ADD THIS
 import 'package:provider/provider.dart'; // 2. ADD THIS
+import 'package:ecommerce_app/utils/analytics.dart';
 
-// 1. This is a new StatelessWidget
-class ProductDetailScreen extends StatelessWidget {
-  // 2. We will pass in the product's data (the map)
+class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> productData;
-  // 3. We'll also pass the unique product ID (critical for 'Add to Cart' later)
   final String productId;
 
-  // 4. The constructor takes both parameters
   const ProductDetailScreen({
     super.key,
     required this.productData,
@@ -17,34 +14,54 @@ class ProductDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<ProductDetailScreen> createState() => _ProductDetailScreenState();
+}
+
+class _ProductDetailScreenState extends State<ProductDetailScreen> {
+  int _quantity = 1;
+
+  void _incrementQuantity() {
+    setState(() {
+      _quantity++;
+    });
+  }
+
+  void _decrementQuantity() {
+    if (_quantity > 1) {
+      setState(() {
+        _quantity--;
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Analytics.incrementProductCounter(
+        productId: widget.productId,
+        fieldName: 'views',
+      );
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 1. Extract data from the map for easier use
-    final String name = productData['name'];
-    final String description = productData['description'];
-    final String imageUrl = productData['imageUrl'];
-    final double price = productData['price'];
-
-    // 2. Get the CartProvider (no rebuild needed)
+    final String name = widget.productData['name'];
+    final String description = widget.productData['description'];
+    final String imageUrl = widget.productData['imageUrl'];
+    final double price = widget.productData['price'];
     final cart = Provider.of<CartProvider>(context, listen: false);
-
-    // 3. The main screen widget
     return Scaffold(
-      appBar: AppBar(
-        // 4. Show the product name in the top bar
-        title: Text(name),
-      ),
-      // 5. This allows scrolling if the description is very long
+      appBar: AppBar(title: Text(name)),
       body: SingleChildScrollView(
         child: Column(
-          // 6. Make children fill the width
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 7. The large product image
             Image.network(
               imageUrl,
-              height: 300, // Give it a fixed height
-              fit: BoxFit.cover, // Make it fill the space
-              // 8. Add the same loading/error builders as the card
+              height: 300,
+              fit: BoxFit.cover,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
                 return const SizedBox(
@@ -59,14 +76,11 @@ class ProductDetailScreen extends StatelessWidget {
                 );
               },
             ),
-
-            // 9. A Padding widget to contain all the text
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 10. Product Name (large font)
                   Text(
                     name,
                     style: const TextStyle(
@@ -75,23 +89,17 @@ class ProductDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-
-                  // 11. Price (large font, different color)
                   Text(
-                    '₱${price.toStringAsFixed(2)}',
+                    '\u{20B1}${price.toStringAsFixed(2)}',
                     style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.deepPurple,
+                      fontSize: 15,
+                      color: Colors.grey[800],
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-
-                  // 12. A horizontal dividing line
                   const Divider(thickness: 1),
                   const SizedBox(height: 16),
-
-                  // 13. The full description
                   Text(
                     'About this item',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -99,24 +107,38 @@ class ProductDetailScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     description,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.5, // Adds line spacing for readability
-                    ),
+                    style: const TextStyle(fontSize: 16, height: 1.5),
                   ),
                   const SizedBox(height: 30),
-
-                  // 14. The "Add to Cart" button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline),
+                        onPressed: _decrementQuantity,
+                      ),
+                      Text('$_quantity', style: const TextStyle(fontSize: 20)),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline),
+                        onPressed: _incrementQuantity,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   ElevatedButton.icon(
-                    onPressed: () {
-                      // 15. Add item to cart
-                      cart.addItem(productId, name, price);
-
-                      // 16. Show confirmation
+                    onPressed: () async {
+                      for (int i = 0; i < _quantity; i++) {
+                        cart.addItem(widget.productId, name, price);
+                      }
+                      await Analytics.incrementProductCounter(
+                        productId: widget.productId,
+                        fieldName: 'sales',
+                        by: _quantity,
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Added to cart!'),
-                          duration: Duration(seconds: 2),
+                        SnackBar(
+                          content: Text('Added $_quantity x $name to cart!'),
+                          duration: const Duration(seconds: 2),
                         ),
                       );
                     },

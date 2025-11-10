@@ -98,12 +98,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 // 1. A spacer
                 const SizedBox(height: 20),
 
+                // 2. Logo image
+                Image.asset('assets/images/app_logo.png', height: 120),
+
+                // 3. Title
+                const SizedBox(height: 10),
+                const Text(
+                  'SMART HOME',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+
+                // 4. Spacer
+                const SizedBox(height: 30),
+
                 // 2. The Email Text Field
                 TextFormField(
                   controller: _emailController, // 3. Link the controller
                   decoration: const InputDecoration(
                     labelText: 'Email',
                     border: OutlineInputBorder(), // 4. Nice border
+                    prefixIcon: Icon(Icons.email),
                   ),
                   keyboardType:
                       TextInputType.emailAddress, // 5. Show '@' on keyboard
@@ -129,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Password',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.lock),
                   ),
                   // 11. Validator function
                   validator: (value) {
