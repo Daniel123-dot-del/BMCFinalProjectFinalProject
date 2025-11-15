@@ -1,44 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class ProductCard extends StatelessWidget {
   final String productName;
   final double price;
   final String imageUrl;
-  final VoidCallback onTap; // 1. ADD THIS LINE
+  final VoidCallback onTap;
 
   const ProductCard({
     super.key,
     required this.productName,
     required this.price,
     required this.imageUrl,
-    required this.onTap, // 2. ADD THIS TO THE CONSTRUCTOR
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 1. The Card will get its style from our new 'cardTheme'
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
+
     return InkWell(
       onTap: onTap,
       child: SizedBox(
-        height: 220, // Adjusted height to reduce card size
+        height: 220,
         child: Card(
-          // 2. The theme's 'clipBehavior' will handle the clipping
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 3. This Expanded makes the image take up most of the space
               Expanded(
-                flex: 3, // Give the image 3 "parts" of the space
+                flex: 3,
                 child: Image.network(
                   imageUrl,
-                  fit: BoxFit.cover, // This makes the image fill its box
-                  // Show a loading spinner
+                  fit: BoxFit.cover,
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
                     return const Center(child: CircularProgressIndicator());
                   },
-
-                  // Show an error icon
                   errorBuilder: (context, error, stackTrace) {
                     return const Center(
                       child: Icon(
@@ -50,30 +47,26 @@ class ProductCard extends StatelessWidget {
                   },
                 ),
               ),
-
-              // 4. This Expanded holds the text
               Expanded(
-                flex: 2, // Give the text 2 "parts" of the space
+                flex: 2,
                 child: Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.start,
                     children: [
-                      // Product Name
                       Text(
                         productName,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
-                        maxLines: 2, // Allow two lines for the name
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const Spacer(), // 5. Pushes the price to the bottom
-                      // Price
+                      const Spacer(),
                       Text(
-                        '₱${price.toStringAsFixed(2)}',
+                        formatter.format(price),
                         style: TextStyle(
                           fontSize: 15,
                           color: Colors.grey[800],
