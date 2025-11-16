@@ -15,10 +15,10 @@ class _AdminOrderScreenState extends State<AdminOrderScreen> {
 
   // 1. MODIFY this function to accept userId
   Future<void> _updateOrderStatus(
-    String orderId,
-    String newStatus,
-    String userId,
-  ) async {
+      String orderId,
+      String newStatus,
+      String userId,
+      ) async {
     try {
       // 2. This part is the same (update the order)
       await _firestore.collection('orders').doc(orderId).update({
@@ -87,6 +87,8 @@ class _AdminOrderScreenState extends State<AdminOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
+
     return Scaffold(
       appBar: AppBar(title: const Text('Manage Orders')),
       // 1. Use a StreamBuilder to get all orders
@@ -142,7 +144,7 @@ class _AdminOrderScreenState extends State<AdminOrderScreen> {
                   ),
                   subtitle: Text(
                     'User: ${orderData['userId']}\n'
-                    'Total: ₱${(orderData['totalPrice']).toStringAsFixed(2)} | Date: $formattedDate',
+                        'Total: ${formatter.format(orderData['totalPrice'])} | Date: $formattedDate',
                   ),
                   isThreeLine: true,
 

@@ -2,6 +2,7 @@ import 'package:ecommerce_app/providers/cart_provider.dart';
 import 'package:ecommerce_app/screens/order_success_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 // 1. An enum to represent our different payment methods
 //    This is cleaner than using strings like "gcash"
@@ -51,7 +52,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const OrderSuccessScreen()),
-          (route) => false,
+              (route) => false,
         );
       }
     } catch (e) {
@@ -73,7 +74,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   Widget build(BuildContext context) {
     // 1. Use the Philippine Peso sign (₱)
     //    We get the totalAmount from 'widget.totalAmount'
-    final String formattedTotal = '₱${widget.totalAmount.toStringAsFixed(2)}';
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
+    final String formattedTotal = formatter.format(widget.totalAmount);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Confirm Payment')),
@@ -156,8 +158,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
               onPressed: _isLoading ? null : _processPayment,
               child: _isLoading
                   ? const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    )
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              )
                   : Text('Pay Now ($formattedTotal)'),
             ),
           ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:ecommerce_app/providers/cart_provider.dart'; // 1. ADD THIS
 import 'package:provider/provider.dart'; // 2. ADD THIS
 import 'package:ecommerce_app/utils/analytics.dart';
+import 'package:intl/intl.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Map<String, dynamic> productData;
@@ -52,6 +53,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     final String imageUrl = widget.productData['imageUrl'];
     final double price = widget.productData['price'];
     final cart = Provider.of<CartProvider>(context, listen: false);
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
+
     return Scaffold(
       appBar: AppBar(title: Text(name)),
       body: SingleChildScrollView(
@@ -90,7 +93,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '\u{20B1}${price.toStringAsFixed(2)}',
+                    formatter.format(price),
                     style: TextStyle(
                       fontSize: 15,
                       color: Colors.grey[800],

@@ -3,6 +3,7 @@ import 'package:ecommerce_app/screens/payment_screen.dart'; // 1. Import Payment
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ecommerce_app/screens/order_success_screen.dart'; // 1. ADD THIS
+import 'package:intl/intl.dart';
 
 // 2. It's a StatelessWidget again!
 class CartScreen extends StatelessWidget {
@@ -12,6 +13,7 @@ class CartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // 3. We listen: true, so the list and total update
     final cart = Provider.of<CartProvider>(context);
+    final formatter = NumberFormat.currency(locale: 'en_PH', symbol: '₱');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your Cart')),
@@ -22,30 +24,30 @@ class CartScreen extends StatelessWidget {
             child: cart.items.isEmpty
                 ? const Center(child: Text('Your cart is empty.'))
                 : ListView.builder(
-                    itemCount: cart.items.length,
-                    itemBuilder: (context, index) {
-                      final cartItem = cart.items[index];
-                      return ListTile(
-                        leading: CircleAvatar(child: Text(cartItem.name[0])),
-                        title: Text(cartItem.name),
-                        subtitle: Text('Qty: ${cartItem.quantity}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '₱${(cartItem.price * cartItem.quantity).toStringAsFixed(2)}',
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                cart.removeItem(cartItem.id);
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+              itemCount: cart.items.length,
+              itemBuilder: (context, index) {
+                final cartItem = cart.items[index];
+                return ListTile(
+                  leading: CircleAvatar(child: Text(cartItem.name[0])),
+                  title: Text(cartItem.name),
+                  subtitle: Text('Qty: ${cartItem.quantity}'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatter.format(cartItem.price * cartItem.quantity),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          cart.removeItem(cartItem.id);
+                        },
+                      ),
+                    ],
                   ),
+                );
+              },
+            ),
           ),
           // 3. --- THIS IS THE NEW PRICE BREAKDOWN CARD ---
           Card(
@@ -61,7 +63,7 @@ class CartScreen extends StatelessWidget {
                     children: [
                       const Text('Subtotal:', style: TextStyle(fontSize: 16)),
                       Text(
-                        '₱${cart.subtotal.toStringAsFixed(2)}',
+                        formatter.format(cart.subtotal),
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -75,7 +77,7 @@ class CartScreen extends StatelessWidget {
                     children: [
                       const Text('VAT (12%):', style: TextStyle(fontSize: 16)),
                       Text(
-                        '₱${cart.vat.toStringAsFixed(2)}',
+                        formatter.format(cart.vat),
                         style: const TextStyle(fontSize: 16),
                       ),
                     ],
@@ -95,7 +97,7 @@ class CartScreen extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '₱${cart.totalPriceWithVat.toStringAsFixed(2)}',
+                        formatter.format(cart.totalPriceWithVat),
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -120,16 +122,16 @@ class CartScreen extends StatelessWidget {
               onPressed: cart.items.isEmpty
                   ? null
                   : () {
-                      // 8. Navigate to our new PaymentScreen
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => PaymentScreen(
-                            // 9. Pass the final VAT-inclusive total
-                            totalAmount: cart.totalPriceWithVat,
-                          ),
-                        ),
-                      );
-                    },
+                // 8. Navigate to our new PaymentScreen
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => PaymentScreen(
+                      // 9. Pass the final VAT-inclusive total
+                      totalAmount: cart.totalPriceWithVat,
+                    ),
+                  ),
+                );
+              },
               // 10. No more spinner!
               child: const Text('Proceed to Payment'),
             ),
